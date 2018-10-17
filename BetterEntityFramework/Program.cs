@@ -14,23 +14,26 @@ namespace BetterEntityFramework
         {
             var data = new Data();
 
-            var newConfig = data.Configure().Builder.UseInMemoryDatabase();
-            data.UseConfiguration(newConfig);
+            //var newConfig = data.Configure().Builder.UseInMemoryDatabase("MyInMemoryDB");
+            //data.UseConfiguration(newConfig);
 
             // or
 
             var options = new DataOptionsBuilder();
-            options.Builder.UseInMemoryDatabase();
+            options.Builder.UseInMemoryDatabase("MyInMemoryDB");
 
             data = new DataService(options);
+
+
+            var cat = data.Service.Category;
 
             data.Service.Category.UpdateWhere(category => category.Publish == false, category => new Category { Publish = true }).Wait();
             data.Service.Product.DeleteWhere(product => product.Publish == false).Wait();
 
             var restrictiveTransaction = new DataOptionsBuilder().Builder.UseSqlServer("connection string", builder => builder.ExecutionStrategy(context =>
             {
-                context.Context.Database.BeginTransaction(IsolationLevel.Serializable);
-                return context.Context.Database.CreateExecutionStrategy();
+                context.CurrentDbContext.Context.Database.BeginTransaction(IsolationLevel.Serializable);
+                return context.CurrentDbContext.Context.Database.CreateExecutionStrategy();
             }));
 
             using (var isolatedOperation = data.WithScopedService( restrictiveTransaction))
